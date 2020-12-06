@@ -16,7 +16,7 @@ function toBoardingPass(s::String)::BoardingPass
     column = parse(Int, col_s, base=2)
     seat = row * 8 + column
     result = BoardingPass(row, column, seat)
-    println("parse(", s, ") = ", result)
+    # println("parse(", s, ") = ", result)
     return result
 end
 
@@ -39,5 +39,29 @@ function run(fname)
     return result
 end
 
+function run2(fname)
+    # read file
+    f = open(fname, "r")
+    lines = readlines(f)
+    close(f)
+
+    # compute BoardingPasses
+    seatIDs = map((x) -> toBoardingPass(x).SeatID, lines)
+    sortedSeatIDs = sort(seatIDs)
+    result = -1
+    for i in 1:length(sortedSeatIDs)
+        if i == 1
+            continue
+        end
+        if sortedSeatIDs[i] - sortedSeatIDs[i - 1] == 2
+            result = sortedSeatIDs[i] - 1
+            break
+        end
+    end
+    println("Ran ", fname, " got ", result)
+    return result
+end
+
 run("5.txt")
+run2("5.txt")
 
