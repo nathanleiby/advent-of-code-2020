@@ -34,17 +34,22 @@ function is_valid(item)
     return count >= item.min && count <= item.max
 end
 
+function is_valid_v2(item)
+    match1 = item.password[item.min] == item.letter
+    match2 = item.password[item.max] == item.letter
+    return xor(match1, match2)
+end
+
 function run(fname)
     f = open(fname, "r")
     lines = readlines(f)
-    valid = map((x) -> is_valid(parse_line(x)), lines)
-    println(valid)
+    valid = map((x) -> is_valid_v2(parse_line(x)), lines)
     result = count(x -> x == true, valid)
     close(f)
     println("Ran ", fname, " got ", result)
     return result
 end
 
-@assert run("2example.txt") == 2
+@assert run("2example.txt") == 1
 
 run("2.txt")
