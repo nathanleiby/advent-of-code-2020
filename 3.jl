@@ -39,6 +39,6 @@ function run(fname)
     return out
 end
 
-@assert run("3example.txt") == 336
+@assert run("3ex.txt") == 336
 
 run("3.txt")

@@ -50,6 +50,6 @@ function run(fname)
     return result
 end
 
-@assert run("2example.txt") == 1
+@assert run("2ex.txt") == 1
 
 run("2.txt")
