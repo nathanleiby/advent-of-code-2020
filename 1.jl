@@ -8,10 +8,10 @@ example = [
 1456,
 ]
 
+# Parse input
 f = open("1.txt", "r")
 lines = readlines(f)
 numbers = map((x) -> parse(Int64, x), lines)
-# > ["this is a simple file containing", "text and numbers:", "43.3", "17"]
 close(f)
 
 function compute2(d)
