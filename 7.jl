@@ -99,5 +99,44 @@ function run(fname)
     return result
 end
 
+function count_bags_inside(bagMap, bag)
+    contents = bagMap[bag].Contents
+    if length(contents) == 0
+        return 0
+    else
+        total = 0
+        for k in keys(contents)
+            val = contents[k]
+            # add number of bags at this layer
+            total += val
+            r = count_bags_inside(bagMap, k)
+            # add number of bags inside each of the bags at this layer
+            total += (val * r)
+        end
+        return total
+    end
+end
+
+function run2(fname)
+    # read file
+    f = open(fname, "r")
+    lines = readlines(f)
+    close(f)
+
+    bagTypes = map(parse_rule, lines)
+    bagMap = Dict()
+    for b in bagTypes
+        bagMap[b.Kind] = b
+    end
+
+    result = count_bags_inside(bagMap, "shiny gold")
+
+    println("[part 2] Ran ", fname, " got ", result)
+    return result
+end
+
 @assert run("7ex.txt") == 4
 run("7.txt")
+
+@assert run2("7ex2.txt") == 126
+run2("7.txt")
