@@ -1,3 +1,9 @@
+using Test;
+# Learnings
+# - structs must be mutable to update them
+# - be careful with variable scopings
+# - `@test` works similarly to `@assert` but provides feedback on the failure
+
 mutable struct Command
     Name::String
     Value::Int
@@ -55,7 +61,7 @@ function run(fname)
             end
 
             if in(idx, visited)
-                println("Infinite Loop, at idx = ", idx)
+                # println("Infinite Loop, at idx = ", idx)
                 break
             end
         end
@@ -70,5 +76,6 @@ function run(fname)
     return result
 end
 
-run("8ex.txt")
+@test run("8ex.txt") == 8
+
 run("8.txt")
