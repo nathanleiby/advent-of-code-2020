@@ -1,3 +1,8 @@
+# LEARNING:
+# - Julia has "." operators  that perform an operation elementwise on everything in an array
+#   https://docs.julialang.org/en/v1/manual/mathematical-operations/#man-dot-operators
+#   .. leads to concise syntax like: https://github.com/leesharma/game-of-life-julia/blob/main/rules/standard.jl#L5
+
 using Test;
 
 function run(fname, version=1)
@@ -46,7 +51,6 @@ function take_step(lines, version=1)::Array{String}
         end
         push!(out, new_row)
     end
-    (out)
     return out
 end
 
@@ -134,17 +138,21 @@ end
 
 ex = readlines(open("11ex.txt", "r"))
 ex_1 = readlines(open("11ex.1.txt", "r"))
-# ex_2 = readlines(open("11ex.2.txt", "r"))
-# ex_5 = readlines(open("11ex.5.txt", "r"))
+ex_2 = readlines(open("11ex.2.txt", "r"))
+ex_5 = readlines(open("11ex.5.txt", "r"))
 
-# @test take_step(ex) == ex_1
-# @test take_step(take_step(ex)) == ex_2
-# @test take_step(take_step(take_step(take_step(take_step(ex))))) == ex_5
-# # .. stays stable?
-# @test take_step(take_step(take_step(take_step(take_step(take_step(ex)))))) == ex_5
+@test take_step(ex) == ex_1
+# LEARNING: Julia has function composition operator (\circ)
+# - https://docs.julialang.org/en/v1/manual/functions/#Function-composition-and-piping
+# - https://github.com/leesharma/game-of-life-julia/blob/main/manifolds/grid_torus.jl#L18-L21
+take_2_steps = take_step ∘ take_step
+@test take_2_steps(ex) == ex_2
+@test take_step(take_step(take_step(take_step(take_step(ex))))) == ex_5
+# .. stays stable?
+@test take_step(take_step(take_step(take_step(take_step(take_step(ex)))))) == ex_5
 
-# @test run("11ex.txt") == 37
-# run("11.txt")
+@test run("11ex.txt") == 37
+run("11.txt")
 
 println("VERSION 2")
 
