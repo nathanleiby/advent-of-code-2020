@@ -48,6 +48,7 @@ function CRT(nums, rems)
     # Step 2: Find the partial product of each number.
     partial_products = map((x) -> Int(product / x), nums)
     # Step 3: Find the modular multiplicative inverse of number[i] modulo partialProduct[i].
+    # TODO: should this order be flipped ^
     inverses = []
     for i in 1:length(nums)
         push!(inverses, invmod(partial_products[i], nums[i]))
