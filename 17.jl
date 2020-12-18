@@ -7,6 +7,7 @@ struct Point
     x::Int
     y::Int
     z::Int
+    w::Int
 end
 
 function get_neighbors(p::Point)
@@ -14,11 +15,13 @@ function get_neighbors(p::Point)
     for x_offset in [1,0,-1]
         for y_offset in [1,0,-1]
             for z_offset in [1,0,-1]
-                if x_offset == 0 && y_offset == 0 && z_offset == 0
-                    # skip returning the same point
-                    continue
+                for w_offset in [1,0,-1]
+                    if x_offset == 0 && y_offset == 0 && z_offset == 0 && w_offset == 0
+                        # skip returning the same point
+                        continue
+                    end
+                    push!(neighbors, Point(p.x + x_offset, p.y + y_offset, p.z + z_offset, p.w + w_offset))
                 end
-                push!(neighbors, Point(p.x + x_offset, p.y + y_offset, p.z + z_offset))
             end
         end
     end
@@ -30,7 +33,7 @@ function is_active(values, pt)
 end
 
 function copy(p::Point)
-    return Point(p.x, p.y, p.z)
+    return Point(p.x, p.y, p.z, p.w)
 end
 
 function do_iter(values, low::Point, high::Point)
@@ -51,6 +54,8 @@ function do_iter(values, low::Point, high::Point)
         # If a cube is active
         if is_active(values, p)
             # and exactly 2 or 3 of its neighbors are also active, the cube remains active.
+            # NOTE: This was my bug :( that slowed me down a lot.. I had swapped
+            # arguments and written in([2,3], active_neighbor_count)
             if in(active_neighbor_count, [2,3])
                 new_values[p] = active
             # Otherwise, the cube becomes inactive.
@@ -80,8 +85,8 @@ function do_iter(values, low::Point, high::Point)
         # end
     end
 
-    new_low = Point(low.x - 1, low.y - 1, low.z - 1)
-    new_high = Point(high.x + 1, high.y + 1, high.z + 1)
+    new_low = Point(low.x - 1, low.y - 1, low.z - 1, low.w - 1)
+    new_high = Point(high.x + 1, high.y + 1, high.z + 1, high.w + 1)
     return new_values, new_low, new_high
 end
 
@@ -95,7 +100,7 @@ function print_values(values, low, high)
         println("z=", z)
         for y in low.y:high.y
             for x in low.x:high.x
-                print(values[Point(x, y, z)])
+                print(values[Point(x, y, z, w)])
             end
             println("")
         end
@@ -124,12 +129,12 @@ function run(fname, cycles=6)
     values = Dict{Point,Char}()
     for y in 1:length(lines)
         for (x, val) in enumerate(lines[y])
-            values[Point(x, y, 0)] = val
+            values[Point(x, y, 0, 0)] = val
         end
     end
 
-    low_point = Point(1, 1, 0)
-    high_point = Point(3, 3, 0)
+    low_point = Point(1, 1, 0, 0)
+    high_point = Point(3, 3, 0, 0)
 
     # print base state
     println("After ", 0, " cycle...")
@@ -149,10 +154,15 @@ function run(fname, cycles=6)
     return result
 end
 
-@test run("17ex.txt", 0) == 5
-@test run("17ex.txt", 1) == 11
-@test run("17ex.txt", 2) == 21
+# @test run("17ex.txt", 0) == 5
+# @test run("17ex.txt", 1) == 11
+# @test run("17ex.txt", 2) == 21
 
-@test run("17ex.txt") == 112
+# @test run("17ex.txt") == 112
 
-print(run("17.txt"))
+# print(run("17.txt"))
+
+
+@test run("17ex.txt") == 848
+
+println(run("17.txt"))
