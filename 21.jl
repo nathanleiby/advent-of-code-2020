@@ -64,14 +64,18 @@ function run(fname)
         end
     end
 
-    unsafe_ingredients = collect(keys(ingredient_to_allergen))
+    # Part 2: Sort alphabetically *by their allergen*
+    dangerous_ingredients = map(x -> x[1], sort(collect(ingredient_to_allergen), by=x -> x[2]))
     result = 0
     for e in entries_bak
-        result += length(setdiff(e.Ingredients, unsafe_ingredients))
+        result += length(setdiff(e.Ingredients, dangerous_ingredients))
     end
 
+    # remove inert ingredients
+    result2 = join(dangerous_ingredients, ",")
     println("[part 1] File = ", fname, " got result = ", result)
-    return result
+    println("[part 2] File = ", fname, " got result = ", result2)
+    return result, result2
 end
 
 # mxmxvkd kfcds sqjhc nhms (contains dairy, fish)
@@ -87,6 +91,6 @@ end
 # Each allergen is found in exactly one ingredient.
 # Each ingredient contains zero or one allergen.
 # **Allergens aren't always marked**, but if they are marked, the corresponding ingredien t is definitely present
-@test run("21ex.txt") == 5
+@test run("21ex.txt") == (5, "mxmxvkd,sqjhc,fvjkl")
 
 run("21.txt")
