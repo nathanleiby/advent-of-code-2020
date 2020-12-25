@@ -1,26 +1,34 @@
 using Test
 using DataStructures
-# graphs
 using LightGraphs
 
-# plotting the graph
-# using GraphPlot
-
-# outputting an image of drawn graph
-# using Cairo
-# using Compose
-
-# write to DOT for funz
-# using GraphIO
-
 struct Tile
-    Top::String
-    Right::String
-    Bottom::String
-    Left::String
+    Data::Array{Array{Char}}
 end
 
-function similarity(t1::Tile, t2::Tile)
+struct TileEdges
+    Top::Array{Char}
+    Right::Array{Char}
+    Bottom::Array{Char}
+    Left::Array{Char}
+end
+
+function rotate(tile::Tile)
+    # rotate 90 degrees clockwise
+    # t = tile.Data
+    # return TileEdges(t.Left, t.Top, t.Right, t.Bottom)
+    return Nothing # TODO
+end
+
+function flip_h(tile::Tile)
+    out = []
+    for row in tile.Data
+        push!(out, reverse(row))
+    end
+    return out
+end
+
+function similarity(t1::TileEdges, t2::TileEdges)
     t1_edges = [t1.Top, t1.Right, t1.Bottom, t1.Left]
     t2_edges = [t2.Top, t2.Right, t2.Bottom, t2.Left]
     score = 0
@@ -32,13 +40,14 @@ function similarity(t1::Tile, t2::Tile)
     return score
 end
 
-function get_tile_edges(t)
+function get_tile_edges(tile::Tile)
+    t = tile.Data
     top = t[1]
-    left = join(map((x) -> x[1], t))
+    left = map((x) -> x[1], t)
     bottom = t[length(t)]
-    right = join(map((x) -> x[length(x)], t))
+    right = map((x) -> x[length(x)], t)
 
-    return Tile(top, right, bottom, left)
+    return TileEdges(top, right, bottom, left)
 end
 
 function compute_similarities(tile_edges)
@@ -84,11 +93,9 @@ function find_matching_vertex(g, adjacent_vs, n_count, used)
     return Nothing
 end
 
-function determine_arrangement(tiles, scores, freq)
+function determine_arrangement(tiles, scores)
     g = SimpleGraph(length(tiles))
     N = Int(sqrt(length(tiles)))
-
-    # @show g
 
     # Create mappings from vertex_id (1,2,3,....) <=> tile_id (4-digit number like 1492, 4192, etc)
     vertex_to_tile_id = Dict()
@@ -106,9 +113,7 @@ function determine_arrangement(tiles, scores, freq)
         add_edge!(g, src, dst)
     end
 
-    # @show g
     println("G : vertices=$(nv(g)) edges = $(ne(g))")
-    # savegraph("20graph.dot", g, DotFormat())
     used = Set()
 
     out = []
@@ -156,10 +161,6 @@ function determine_arrangement(tiles, scores, freq)
         push!(out, row)
     end
 
-    println("OUT, before conversion:")
-    display(out)
-    println("")
-
     # convert from graph IDs to tile IDs
     for r in 1:N
         for c in 1:N
@@ -167,24 +168,55 @@ function determine_arrangement(tiles, scores, freq)
         end
     end
 
-    println("OUT, after conversion:")
+    println("Tile arrangement:")
     display(out)
     println("")
     return out
+end
 
-    # if N == 3
-    #     return [
-    #         [1951,Nothing,3079],
-    #         [Nothing,Nothing,Nothing],
-    #         [2971,Nothing,1171],
-    #     ]
-    # else N == 12
-    #     return [
-    #         [2857, 1151,2689,1913,2161,1999,1901,1181,3331,2633,2713,3083],
+function align_tiles(tiles, arrangement, N)
+    # TODO: Cleanup and verify the arrangement
+    # - JUST ROTATE, first
+    # - then add flipping later
+    # - flip things around until it's a perfect fit
+    # - verify the fix
+    # - draw it!
 
 
-    #     ]
+    out = []
+    # for r in 1:N
+    #     for c in 1:N
+    #         if r == 1 && c == 1
+    #             # special case to align the first tile
+    #             next_tile = get_tile_edges(tiles[r[1][2]])
+    #             # find common edge
+
+    #             # make sure that edge is facing right
+    #             for i in 1:4
+    #                 for j in 1:4
+    #                 end
+    #             end
+    #         end
+    #         tile_id = arrangement[r][c]
+    #         # rotate until aligned
+    #         for i in 1:4
+    #             for j in 1:4
+    #             end
+    #         end
+    #         edges = get_tile_edges(tiles[tile_id])
+
+    #     end
     # end
+
+    return out
+end
+
+function search_for_monsters(aligned)
+    # TODO: Search for Monsters
+    # (1) The borders of each tile are not part of the actual image; start by removing them.
+    # (2) Find patterns that look like monster.. try various orientations of image until you see >0
+
+    return 0
 end
 
 function brute_force(tiles)
@@ -200,48 +232,11 @@ function brute_force(tiles)
 
     # find anything that shares >0 edges
     scores = compute_similarities(tile_edges)
-    # println("Non-zero scores:")
-    # @show scores
-    # for s in keys(scores)
-    #     println("$(s) $(scores[s])")
-    # end
-
-    # frequency by tile ID
-    freq = Dict()
-    for s in keys(scores)
-        if !in(s[1], keys(freq))
-            freq[s[1]] = 0
-        end
-        if !in(s[2], keys(freq))
-            freq[s[2]] = 0
-        end
-        freq[s[1]] += 1
-        freq[s[2]] += 1
-    end
-    # half them since we double counted tile IDs above
-    for k in keys(freq)
-        freq[k] = Int(freq[k] / 2)
-    end
-
-
-    # println("Frequency by Tile ID:")
-    # @show freq
-    # for k in keys(freq)
-    #     println("$(k) $(freq[k])")
-    # end
-
-    # OK, so now we know which items are in the four corners, and we should be able to tile outwards from there!
-    arrangement = determine_arrangement(tiles, scores, freq)
-
-    # TODO: Cleanup and verify the arrangement
-    # - flip things around until it's a perfect fit
-    # - verify the fix
-    # - draw it!
-
-    # TODO: Search for Monsters
-    # (1) The borders of each tile are not part of the actual image; start by removing them.
-    # (2) Find patterns that look like monster.. try various orientations of image until you see >0
-
+    # build a graph from above information
+    arrangement = determine_arrangement(tiles, scores)
+    # we now need to rotate individual tiles so it's perfectly aligned
+    aligned = align_tiles(tiles, arrangement, N)
+    monster_count = search_for_monsters(aligned)
 
     # This shortcut works, since I didn't actual determine how the grid is arranged
     # corner_tiles = keys(filter((x) -> x[2] == 2, freq))
@@ -251,9 +246,7 @@ function brute_force(tiles)
         arrangement[N][1],
         arrangement[N][N],
     ]
-    println(corner_tiles)
-    @assert length(corner_tiles) == 4 # must be exactly four corner tiles
-    return reduce(*, corner_tiles)
+    return reduce(*, corner_tiles), monster_count
 
 end
 
@@ -269,11 +262,11 @@ function run(fname)
         if startswith(l, "Tile")
             tile_number = parse(Int, l[6:length(l) - 1])
             current_tile = tile_number
-            tiles[current_tile] = []
+            tiles[current_tile] = Tile([])
         elseif l == ""
             # skip
         else
-            push!(tiles[current_tile], l)
+            push!(tiles[current_tile].Data, collect(l))
         end
     end
 
@@ -286,5 +279,5 @@ function run(fname)
     return result
 end
 
-@test run("20ex.txt") == (1951 * 3079 * 2971 * 1171)
-run("20.txt")
+@test run("20ex.txt")[1] == (1951 * 3079 * 2971 * 1171)
+@test run("20.txt")[1] == 60145080587029
