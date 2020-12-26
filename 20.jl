@@ -15,7 +15,11 @@ struct TileEdges
 end
 
 function rotate(tile::Tile)::Tile
-    t = tile.Data
+    return Tile(rotate(tile.Data))
+end
+
+# rotate a (NxN square) 2-dimensional array
+function rotate(t)
     T = length(t)
     out = []
     for i in 1:T
@@ -31,22 +35,30 @@ function rotate(tile::Tile)::Tile
         end
     end
 
-    return Tile(out)
+    return out
 end
 
 function flip_v(tile::Tile)::Tile
-    return Tile(reverse(tile.Data))
+    return Tile(flip_v(tile.Data))
+end
+
+function flip_v(t)
+    return reverse(t)
 end
 
 function flip_h(tile::Tile)::Tile
-    out = []
-    for row in tile.Data
-        push!(out, reverse(row))
-    end
-    return Tile(out)
+    return Tile(flip_h(tile.Data))
 end
 
-function variations(tile::Tile)::Array{Tile}
+function flip_h(t)
+    out = []
+    for row in t
+        push!(out, reverse(row))
+    end
+    return out
+end
+
+function variations(tile)
     # TODO: Could return an iterator instead and do these one at a time?
     out = []
 
@@ -323,24 +335,123 @@ function align_tiles(tiles, arrangement, N)
     return out
 end
 
-function print_grid(grid)
-    ex_tile = grid[1][1]
-    for row in grid
-        for y in 1:length(ex_tile.Data) # for each tile idx
-            line = join(map((x) -> join(x.Data[y]), row), " ")
-            println(line)
-        end
-        println("")
+function grid_to_string(grid, separate_tiles=true)
+    h_delim = ""
+    if separate_tiles
+        h_delim = " "
     end
 
+    ex_tile = grid[1][1]
+    out = ""
+    for row in grid
+        for y in 1:length(ex_tile.Data) # for each tile idx
+            line = join(map((x) -> join(x.Data[y]), row), h_delim)
+            out *= (line * "\n")
+        end
+        if separate_tiles
+            out *= "\n"
+        end
+    end
+    return out
 end
+
+function remove_borders(t::Tile)::Tile
+    out = []
+    for row in t.Data
+        # remove left and right
+        push!(out, row[2:end - 1])
+    end
+
+    # remove top and bottom
+    out = out[2:end - 1]
+
+    return Tile(out)
+end
+
+function is_monster(chars, r, c, mtile::Tile, marked_tiles::Set)
+    to_mark = Set()
+    for (mrow, _) in enumerate(mtile.Data)
+        for (mcol, mval)  in enumerate(mtile.Data[mrow])
+            if mval != '#'
+                # When looking for this pattern in the image, the spaces can be
+                # anything; only the # need to match.
+                continue
+            end
+            r2 = r + mrow - 1
+            c2 = c + mcol - 1
+            if r2 > length(chars) || c2 > length(chars[1])
+                # out of bounds
+                return false
+            end
+            if chars[r2][c2] != '#'
+                return false
+            end
+            push!(to_mark, (r2, c2))
+        end
+    end
+
+    union!(marked_tiles, to_mark)
+    return true
+end
+
 function search_for_monsters(aligned)
     # TODO: Search for Monsters
     # (1) The borders of each tile are not part of the actual image; start by removing them.
-    # (2) Find patterns that look like monster.. try various orientations of image until you see >0
+    cleaned = []
+    for row in aligned
+        push!(cleaned, map(remove_borders, row))
+    end
 
-    # trip the borders of each tile
-    return 0
+    println(grid_to_string(cleaned))
+    println("")
+    println(grid_to_string(cleaned, false))
+
+    # (2) Find patterns that look like monster.. try various orientations of image until you see >0
+    r1 = collect("                  # ")
+    r2 = collect("#    ##    ##    ###")
+    r3 = collect(" #  #  #  #  #  #   ")
+    mtile = Tile([r1,r2,r3])
+
+    result = 0
+    mcount = 0
+
+    # merge tiles (and stringify as side-effect)
+    s = grid_to_string(cleaned, false)
+    # array-ify
+    lines = filter((x) -> !isempty(x), split(s, "\n"))
+    base_chars = map(collect, lines)
+
+    println("BASE CHARS:")
+    map((line) -> println(join(line)), base_chars)
+
+    for chars in variations(base_chars)
+        total_hash = sum((row) -> count((x) -> x == '#', row), chars)
+        marked_tiles = Set() # these are part of the monster
+        for r in 1:length(chars)
+            for c in 1:length(chars[r])
+                if is_monster(chars, r, c, mtile, marked_tiles)
+                    mcount += 1
+                end
+            end
+        end
+
+        if mcount > 0
+            println("== ARRANGEMENT ==\n")
+            map((line) -> println(join(line)), chars)
+            println("\n\n")
+            for mt in marked_tiles
+                chars[mt[1]][mt[2]] = 'O'
+            end
+            map((line) -> println(join(line)), chars)
+            println("\n\n")
+            result = total_hash - length(marked_tiles)
+            break
+        end
+    end
+
+    println("Found $mcount monsters => water roughness = $result")
+
+    return result
 end
 
 function brute_force(tiles)
@@ -360,7 +471,7 @@ function brute_force(tiles)
     arrangement = determine_arrangement(tiles, scores)
     # we now need to rotate individual tiles so it's perfectly aligned
     aligned = align_tiles(tiles, arrangement, N)
-    print_grid(aligned)
+    println(grid_to_string(aligned))
 
     monster_count = search_for_monsters(aligned)
 
