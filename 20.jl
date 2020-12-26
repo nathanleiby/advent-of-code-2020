@@ -2,6 +2,7 @@ using Test
 using DataStructures
 using LightGraphs
 
+
 struct Tile
     Data::Array{Array{Char}}
 end
@@ -13,18 +14,65 @@ struct TileEdges
     Left::Array{Char}
 end
 
-function rotate(tile::Tile)
-    # rotate 90 degrees clockwise
-    # t = tile.Data
-    # return TileEdges(t.Left, t.Top, t.Right, t.Bottom)
-    return Nothing # TODO
+function rotate(tile::Tile)::Tile
+    t = tile.Data
+    T = length(t)
+    out = []
+    for i in 1:T
+        row = []
+        for _ in 1:T
+            push!(row, '-')
+        end
+        push!(out, row)
+    end
+    for i in 1:T
+        for j in 1:T
+            out[i][j] = t[T - (j - 1)][i];
+        end
+    end
+
+    return Tile(out)
 end
 
-function flip_h(tile::Tile)
+function flip_v(tile::Tile)::Tile
+    return Tile(reverse(tile.Data))
+end
+
+function flip_h(tile::Tile)::Tile
     out = []
     for row in tile.Data
         push!(out, reverse(row))
     end
+    return Tile(out)
+end
+
+function variations(tile::Tile)::Array{Tile}
+    # TODO: Could return an iterator instead and do these one at a time?
+    out = []
+
+    push!(out, tile)
+    push!(out, rotate(tile))
+    push!(out, rotate(rotate(tile)))
+    push!(out, rotate(rotate(rotate(tile))))
+
+    vtile = flip_v(tile)
+    push!(out, vtile)
+    push!(out, rotate(vtile))
+    push!(out, rotate(rotate(vtile)))
+    push!(out, rotate(rotate(rotate(vtile))))
+
+    htile = flip_h(tile)
+    push!(out, htile)
+    push!(out, rotate(htile))
+    push!(out, rotate(rotate(htile)))
+    push!(out, rotate(rotate(rotate(htile))))
+
+    vhtile = flip_h(tile)
+    push!(out, vhtile)
+    push!(out, rotate(vhtile))
+    push!(out, rotate(rotate(vhtile)))
+    push!(out, rotate(rotate(rotate(vhtile))))
+
     return out
 end
 
@@ -40,6 +88,25 @@ function similarity(t1::TileEdges, t2::TileEdges)
     return score
 end
 
+import Base.collect
+function collect(te::TileEdges)
+    return [te.Top, te.Right, te.Bottom, te.Left]
+end
+
+function find_common_edge(t1::Tile, t2::Tile)
+    t1_edges = collect(get_tile_edges(t1))
+    t2_edges = collect(get_tile_edges(t2))
+
+    # TODO: Could determine here if reverse is needed
+    for t1e in t1_edges
+        if in(t1e, t2_edges) || in(reverse(t1e), t2_edges)
+            return t1e
+        end
+    end
+
+    throw("No common edge")
+end
+
 function get_tile_edges(tile::Tile)
     t = tile.Data
     top = t[1]
@@ -48,6 +115,19 @@ function get_tile_edges(tile::Tile)
     right = map((x) -> x[length(x)], t)
 
     return TileEdges(top, right, bottom, left)
+end
+
+function get_edge(te::TileEdges, k)
+    if k == "Top"
+        return te.Top
+    elseif k == "Bottom"
+        return te.Bottom
+    elseif k == "Right"
+        return te.Right
+    elseif k == "Left"
+        return te.Left
+    end
+    throw("invalid input $(k)")
 end
 
 function compute_similarities(tile_edges)
@@ -174,48 +254,92 @@ function determine_arrangement(tiles, scores)
     return out
 end
 
+# TODO: What's the right way to custom stringify something in Julia?
+function print_tile(t::Tile)
+    out = ""
+    for row in t.Data
+        out *= join(row)
+        out *= "\n"
+    end
+    println(out)
+end
+
+# function align_tiles(tiles, arrangement, N)::Array{Array{Tile}}
 function align_tiles(tiles, arrangement, N)
-    # TODO: Cleanup and verify the arrangement
-    # - JUST ROTATE, first
-    # - then add flipping later
-    # - flip things around until it's a perfect fit
-    # - verify the fix
-    # - draw it!
-
-
+    N = length(arrangement)
     out = []
-    # for r in 1:N
-    #     for c in 1:N
-    #         if r == 1 && c == 1
-    #             # special case to align the first tile
-    #             next_tile = get_tile_edges(tiles[r[1][2]])
-    #             # find common edge
+    for r in 1:N
+        row = []
+        for c in 1:N
+            # make sure that edge is facing right
+            cur = tiles[arrangement[r][c]]
 
-    #             # make sure that edge is facing right
-    #             for i in 1:4
-    #                 for j in 1:4
-    #                 end
-    #             end
-    #         end
-    #         tile_id = arrangement[r][c]
-    #         # rotate until aligned
-    #         for i in 1:4
-    #             for j in 1:4
-    #             end
-    #         end
-    #         edges = get_tile_edges(tiles[tile_id])
+            shared_e = Dict()
+            if c + 1 <= N
+                shared_e["Right"] = find_common_edge(cur, tiles[arrangement[r][c + 1]])
+            end
+            if c - 1 >= 1
+                shared_e["Left"] = find_common_edge(cur, tiles[arrangement[r][c - 1]])
+            end
+            if r + 1 <= N
+                shared_e["Bottom"] = find_common_edge(cur, tiles[arrangement[r + 1][c]])
+            end
+            if r - 1 >= 1
+                shared_e["Top"] = find_common_edge(cur, tiles[arrangement[r - 1][c]])
+            end
 
-    #     end
-    # end
+            # @show e_right
+            # @show e_bottom
+
+            # println("CURRENT:")
+            # print_tile(cur)
+            # println("\n")
+            # println("BOTTOM:")
+            # print_tile(bottom)
+            # println("\n")
+
+            for v in variations(cur)
+                te = get_tile_edges(v)
+                aligned = true
+                for k in ["Top", "Bottom", "Right", "Left"]
+                    # TODO: Might also be equal to reverse of shared_e[k]
+                    if haskey(shared_e, k) && !(get_edge(te, k) == shared_e[k] || reverse(get_edge(te, k)) == shared_e[k])
+                        aligned = false
+                        break
+                    end
+                end
+
+                if aligned
+                    println("r=$r c=$c .. found a working alignment!")
+                    # TODO: If we didn't find something for every position, fail
+                    push!(row, v)
+                    break
+                end
+            end
+        end
+        push!(out, row)
+    end
 
     return out
 end
 
+function print_grid(grid)
+    ex_tile = grid[1][1]
+    for row in grid
+        for y in 1:length(ex_tile.Data) # for each tile idx
+            line = join(map((x) -> join(x.Data[y]), row), " ")
+            println(line)
+        end
+        println("")
+    end
+
+end
 function search_for_monsters(aligned)
     # TODO: Search for Monsters
     # (1) The borders of each tile are not part of the actual image; start by removing them.
     # (2) Find patterns that look like monster.. try various orientations of image until you see >0
 
+    # trip the borders of each tile
     return 0
 end
 
@@ -236,6 +360,8 @@ function brute_force(tiles)
     arrangement = determine_arrangement(tiles, scores)
     # we now need to rotate individual tiles so it's perfectly aligned
     aligned = align_tiles(tiles, arrangement, N)
+    print_grid(aligned)
+
     monster_count = search_for_monsters(aligned)
 
     # This shortcut works, since I didn't actual determine how the grid is arranged
@@ -278,6 +404,37 @@ function run(fname)
     println("Result = ", result)
     return result
 end
+
+
+@test rotate(Tile([
+    collect("abc"),
+    collect("def"),
+    collect("ghi"),
+])).Data == Tile([
+    collect("gda"),
+    collect("heb"),
+    collect("ifc"),
+]).Data
+
+@test flip_h(Tile([
+    collect("abc"),
+    collect("def"),
+    collect("ghi"),
+])).Data == Tile([
+    collect("cba"),
+    collect("fed"),
+    collect("ihg"),
+]).Data
+
+@test flip_v(Tile([
+    collect("abc"),
+    collect("def"),
+    collect("ghi"),
+])).Data == Tile([
+    collect("ghi"),
+    collect("def"),
+    collect("abc"),
+]).Data
 
 @test run("20ex.txt")[1] == (1951 * 3079 * 2971 * 1171)
 @test run("20.txt")[1] == 60145080587029
